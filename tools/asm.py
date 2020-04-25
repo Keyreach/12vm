@@ -38,6 +38,7 @@ def assemble(code):
     
     placeholders = []
     
+    last_addr = 0x0
     ip = 0x10
     memory = array.array('h', (0 for _ in range(256 - 16)))
     
@@ -88,6 +89,8 @@ def assemble(code):
             memory[ip] = OPCODES[command]
             if operand is None:
                 pass
+            elif operand[0] in ('+', '-'):
+                memory[ip] += ip + int(operand, 0)
             elif operand.isdigit() or operand.startswith('0x'):
                 value = int(operand, 0)
                 memory[ip] += value
@@ -98,10 +101,11 @@ def assemble(code):
                     placeholders.append((operand, ip))
             
             ip += 1
+        last_addr = max(ip, last_addr)
     if len(placeholders) > 0:
         print('Label ' + placeholders[0][0] + ' is missing')
         raise ValueError('Label not defined')
-    return memory
+    return memory[:last_addr + 1]
 
 def validate_args(args):
     if len(args) < 2:
