@@ -63,14 +63,27 @@ static short code[0x100] = {
     0x000, 0x000, 0x000, 0x000
 };
 
+short vm_mem_read(unsigned short addr) {
+    return code[addr];
+}
+
+void vm_mem_write(unsigned short addr, short value) {
+    if(addr == MMIO_DIGIT_OUT) {
+        printf("%hd\n", value);
+    } else if(addr == MMIO_CHAR_OUT) {
+        putchar((unsigned char)(value & 0xFF));
+    } else {
+        code[addr] = value;
+    }
+}
+
 void runvm() {
     unsigned long counter = 0;
-    unsigned short ip = RESERVED_OFFSET, jump, op, addr, tmp;
+    unsigned short ip = RESERVED_OFFSET, op, addr, tmp;
     signed short acc = 0;
     char prefix;
     while(ip < 0x100) {
         counter++;
-        jump = 0;
         op = code[ip];
         ip++;
         prefix = (op >> 8);
@@ -95,31 +108,18 @@ void runvm() {
             ip = code[(unsigned short)op & 0xFF];
             break;
         case OP_LD:
-            acc = code[(unsigned short)op & 0xFF];
+            acc = vm_mem_read((unsigned short)op & 0xFF);
             break;
         case OP_LDI:
-            acc = code[code[(unsigned short)op & 0xFF]];
+            acc = vm_mem_read(vm_mem_read((unsigned short)op & 0xFF));
             break;
         case OP_ST:
             addr = (unsigned short)op & 0xFF;
-            if(addr == MMIO_DIGIT_OUT) {
-                printf("%hd\n", acc);
-                break;
-            } else if(addr == MMIO_CHAR_OUT) {
-                putchar((unsigned char)(acc & 0xFF));
-            } else {
-                code[addr] = acc;
-            }
+            vm_mem_write(addr, acc);
             break;
         case OP_STI:
-            addr = code[(unsigned short)op & 0xFF];
-            if(addr == MMIO_DIGIT_OUT) {
-                printf("%hd\n", acc);
-            } else if(addr == MMIO_CHAR_OUT) {
-                putchar((unsigned char)(acc & 0xFF));
-            } else {
-                code[addr] = acc;
-            }
+            addr = vm_mem_read((unsigned short)op & 0xFF);
+            vm_mem_write(addr, acc);
             break;
         case OP_SET:
             acc = (unsigned short)op & 0xFF;
@@ -157,6 +157,10 @@ void runvm() {
                 break;
             }
             break;
+        default:
+            printf("Invalid instruction\n- %04hx\n", instruction);
+            return;
+            break;
         }
     }
     printf("\nCycles: %ld\n", counter);
@@ -165,7 +169,7 @@ void runvm() {
 int main(int argc, char **argv) {
     FILE *f;
     unsigned short *buf;
-    size_t fs, fr, i;
+    size_t fs, fr;
     if(argc < 2) {
         puts("Argument required");
         return 1;
@@ -176,7 +180,13 @@ int main(int argc, char **argv) {
     buf = (unsigned short *)calloc(fs / sizeof(unsigned short), sizeof(unsigned short));
     fseek(f, 0, SEEK_SET);
     fr = fread(buf, sizeof(unsigned short), fs / sizeof(unsigned short), f);
+    if(fr * sizeof(short) < fs) {
+        printf("Error while reading file, %ld of %ld read (%d)\n", fr, fs, ferror(f));
+        fclose(f);
+        return 1;
+    }
     fclose(f);
+    
 
     if(fs > 245 * 2) return 1;
     memcpy((char *)(&code[RESERVED_OFFSET]), buf, fs);
