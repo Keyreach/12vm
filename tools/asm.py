@@ -1,4 +1,4 @@
-import sys, re, array, enum
+import os, sys, re, array, enum, traceback
 
 OPCODES = {
     'RSET': 0x000,
@@ -69,12 +69,13 @@ def assemble(code):
             pass
     
         if command in ('DATA', 'DAT'):
-            value = int(operand, 0)
-            memory[ip] = value
+            memory[ip] = int(operand, 0)
+            ip += 1
+        elif command == 'CHAR':
+            memory[ip] = ord(operand)
             ip += 1
         elif command == 'ORG':
-            value = int(operand, 0)
-            ip = value
+            ip = int(operand, 0)
         elif command == 'REF':
             if operand in labels:
                 memory[ip] += labels[operand]
@@ -87,17 +88,18 @@ def assemble(code):
             memory[ip] = OPCODES[command]
             if operand is None:
                 pass
-            elif not operand.isdigit():
+            elif operand.isdigit() or operand.startswith('0x'):
+                value = int(operand, 0)
+                memory[ip] += value
+            else:
                 if operand in labels:
                     memory[ip] += labels[operand]
                 else:
                     placeholders.append((operand, ip))
-            else:
-                value = int(operand, 0)
-                memory[ip] += value
+            
             ip += 1
     if len(placeholders) > 0:
-        print('Label ' + placeholders[0][0] + 'missing')
+        print('Label ' + placeholders[0][0] + ' is missing')
         raise ValueError('Label not defined')
     return memory
 
@@ -120,6 +122,7 @@ def main(args):
             f.write(data[0x10:].tobytes())
         return 0
     except:
+        traceback.print_exc()
         return 1
 
 if __name__ == '__main__':

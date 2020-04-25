@@ -61,7 +61,7 @@ enum {
 #define LOW_BYTE(x) (unsigned short)x & 0xFF
 
 
-static short code[0x100] = {
+static short vmem[0x100] = {
     0x000, 0x000, 0x000, 0x000,
     0x000, 0x000, 0x000, 0x000,
     0x000, 0x000, 0x000, 0x000,
@@ -69,7 +69,7 @@ static short code[0x100] = {
 };
 
 short vm_mem_read(unsigned short addr) {
-    return code[addr];
+    return vmem[addr];
 }
 
 void vm_mem_write(unsigned short addr, short value) {
@@ -78,7 +78,7 @@ void vm_mem_write(unsigned short addr, short value) {
     } else if(addr == MMIO_CHAR_OUT) {
         putchar((unsigned char)(value & 0xFF));
     } else {
-        code[addr] = value;
+        vmem[addr] = value;
     }
 }
 
@@ -89,7 +89,7 @@ void runvm() {
     char prefix;
     while(ip < 0x100) {
         counter++;
-        op = code[ip];
+        op = vmem[ip];
         ip++;
         prefix = (op >> 8);
         //printf("%02hx: %03hx\n", ip, op);
@@ -98,7 +98,7 @@ void runvm() {
             ip = 1000;
             break;
         case OP_JMP:
-            code[REG_RA] = ip;
+            vmem[REG_RA] = ip;
             ip = (LOW_BYTE(op));
             break;
         case OP_JZR:
@@ -110,7 +110,7 @@ void runvm() {
                 ip = LOW_BYTE(op);
             break;
         case OP_JI:
-            ip = code[LOW_BYTE(op)];
+            ip = vmem[LOW_BYTE(op)];
             break;
         case OP_LD:
             acc = vm_mem_read(LOW_BYTE(op));
@@ -132,40 +132,40 @@ void runvm() {
         case OP_ALU:
             switch((op >> 4) & 0xF) {
             case ALU_ADD:
-                acc += code[LOW_NIBBLE(op)];
+                acc += vmem[LOW_NIBBLE(op)];
                 break;
             case ALU_SUB:
-                acc -= code[LOW_NIBBLE(op)];
+                acc -= vmem[LOW_NIBBLE(op)];
                 break;
             case ALU_AND:
-                acc &= code[LOW_NIBBLE(op)];
+                acc &= vmem[LOW_NIBBLE(op)];
                 break;
             case ALU_OR:
-                acc |= code[LOW_NIBBLE(op)];
+                acc |= vmem[LOW_NIBBLE(op)];
                 break;
             case ALU_XOR:
-                acc ^= code[LOW_NIBBLE(op)];
+                acc ^= vmem[LOW_NIBBLE(op)];
                 break;
             case ALU_INV:
-                code[LOW_NIBBLE(op)] = ~code[LOW_NIBBLE(op)];
+                vmem[LOW_NIBBLE(op)] = ~vmem[LOW_NIBBLE(op)];
                 break;
             case ALU_INC:
-                code[LOW_NIBBLE(op)]++;
+                vmem[LOW_NIBBLE(op)]++;
                 break;
             case ALU_DEC:
-                code[LOW_NIBBLE(op)]--;
+                vmem[LOW_NIBBLE(op)]--;
                 break;
             case ALU_PSH:
-                vm_mem_write(code[REG_SP], code[LOW_NIBBLE(op)]);
-                code[REG_SP]--;
+                vm_mem_write(vmem[REG_SP], vmem[LOW_NIBBLE(op)]);
+                vmem[REG_SP]--;
                 break;
             case ALU_POP:
-                code[REG_SP]++;
-                code[LOW_NIBBLE(op)] = vm_mem_read(code[REG_SP]);
+                vmem[REG_SP]++;
+                vmem[LOW_NIBBLE(op)] = vm_mem_read(vmem[REG_SP]);
                 break;
             case ALU_XCH:
-                tmp = code[LOW_NIBBLE(op)];
-                code[LOW_NIBBLE(op)] = acc;
+                tmp = vmem[LOW_NIBBLE(op)];
+                vmem[LOW_NIBBLE(op)] = acc;
                 acc = tmp;
                 break;
             }
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
     
 
     if(fs > 245 * 2) return 1;
-    memcpy((char *)(&code[RESERVED_OFFSET]), buf, fs);
+    memcpy((char *)(&vmem[RESERVED_OFFSET]), buf, fs);
     
     runvm();
     return 0;
