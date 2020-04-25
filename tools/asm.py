@@ -22,6 +22,8 @@ OPCODES = {
      'INV': 0xC60,
      'XOR': 0xC70,
     'SWAP': 0xCF0,
+    'PUSH': 0xCC0,
+     'POP': 0xCD0,
      
      'SET': 0xD00
 }
