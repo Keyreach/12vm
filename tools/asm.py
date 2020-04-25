@@ -39,14 +39,6 @@ def assemble(code):
     ip = 0x10
     memory = array.array('h', (0 for _ in range(256 - 16)))
     
-    # rgx = r'(?:([A-z0-9]+):\s+)*([A-z0-9]+)(?:[ \t]+([A-z0-9]+))*(\n|$)'
-    
-    ops = []
-    
-    #for m in re.finditer(rgx, code):
-    #    label = m.group(1)
-    #    command = m.group(2).upper()
-    #    operand = m.group(3)
     for line in code.split('\n'):
         if line == '':
             continue
@@ -87,12 +79,6 @@ def assemble(code):
             else:
                 placeholders.append((operand, ip))
             ip += 1
-        # elif command == 'SET':
-        #    value = int(operand, 0)
-        #    memory[ip] = OPCODES['JUMP'] + (ip + 2)
-        #    memory[ip + 1] = value
-        #    memory[ip + 2] = OPCODES['LOAD'] + (ip + 1)
-        #    ip += 3
         else:
             if not command in OPCODES:
                 raise ValueError('Wrong operation ' + command)
@@ -113,12 +99,26 @@ def assemble(code):
         raise ValueError('Label not defined')
     return memory
 
+def validate_args(args):
+    if len(args) < 2:
+        print('Usage: asm.py <assembly file> <output file>')
+        return False
+    if not os.path.isfile(args[0]):
+        print('Wrong assembly file')
+        return False
+    return True
+
 def main(args):
-    with open(args[0], 'r') as f:
-        data = assemble(f.read())
-    with open(args[1], 'wb') as f:
-        f.write(data[0x10:].tobytes())
-    return 0
+    if not validate_args(args):
+        return 0
+    try:
+        with open(args[0], 'r') as f:
+            data = assemble(f.read())
+        with open(args[1], 'wb') as f:
+            f.write(data[0x10:].tobytes())
+        return 0
+    except:
+        return 1
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]) or 0)

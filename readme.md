@@ -18,21 +18,19 @@
 
 ### IM instruction
 
-15 .. 12 - 0000 (reserved)
+<table>
+<tr><td>15</td><td>14</td><td>13</td><td>12</td><td>11</td><td>10</td><td>9</td><td>8</td><td>7</td><td>6</td><td>5</td><td>4</td><td>3</td><td>2</td><td>1</td><td>0</td></tr>
+<tr><td colspan='4'>0000 (unused)</td><td colspan='4'>OpCode</td><td colspan='8'>Address / Immediate</td></tr>
+</table>
 
-11 .. 8 - opcode
-
-7 .. 0 - memory address / zero page address / immediate operand
 
 ### ISR instruction
 
-15 .. 12 - 0000 (reserved)
+<table>
+<tr><td>15</td><td>14</td><td>13</td><td>12</td><td>11</td><td>10</td><td>9</td><td>8</td><td>7</td><td>6</td><td>5</td><td>4</td><td>3</td><td>2</td><td>1</td><td>0</td></tr>
+<tr><td colspan='4'>0000 (unused)</td><td colspan='4'>OpGroup</td><td colspan='4'>SubOpCode</td><td colspan='4'>Address</td></tr>
+</table>
 
-11 .. 8 - operation group
-
-7 .. 4 - operation function
-
-3 .. 0 - register/zero page address
 
 ## Instruction set
 
