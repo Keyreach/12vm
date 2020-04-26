@@ -25,7 +25,9 @@ OPCODES = {
     'PUSH': 0xCC0,
      'POP': 0xCD0,
      
-     'SET': 0xD00
+     'SET': 0xD00,
+    'CALL': 0xF00,
+     'RET': 0xF0F
 }
 
 def assemble(code):
@@ -64,14 +66,15 @@ def assemble(code):
         if len(instruction) == 0:
             continue
         command = instruction[0].upper()
-        try:
+        if len(instruction) > 1:
             operand = instruction[1]
-        except:
-            pass
+        else:
+            operand = None
     
         if command in ('DATA', 'DAT'):
-            memory[ip] = int(operand, 0)
-            ip += 1
+            while len(instruction) > 1:
+                memory[ip] = int(instruction.pop(1), 0)
+                ip += 1
         elif command == 'CHAR':
             memory[ip] = ord(operand)
             ip += 1
