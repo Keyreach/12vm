@@ -52,6 +52,15 @@ JMPN     | 1001   | IM   | Jumps to address if accumulator is less than 0
 JUMP     | 1010   | IM   | Jumps to address, stores IP at address 0x0F
 JI       | 1011   | IM   | Jumps to address, stored in specified location
 
+### Subroutine instructions
+
+Note: jump to zero page address is meaningless, because there is no convenient way to store subroutine there, so this operation is treated as "return from subroutine" operation
+
+Mnemonic | Opcode    | Type | Description
+---------|-----------|------|-------------
+CALL     | 1111      | IM   | Jump to address, store IP in stack
+RET      | 1111 0000 | -    | Pop address from stack, jump there
+
 ### ALU instructions
 
 Mnemonic | Opcode    | Type | Description
@@ -64,6 +73,8 @@ INC      | 1100 0100 | ISR  |
 DEC      | 1100 0101 | ISR  |
 INV      | 1100 0110 | ISR  |
 XOR      | 1100 0111 | ISR  |
+PUSH     | 1100 1000 | ISR  | Push value at ZP address to stack
+POP      | 1100 1001 | ISR  | Pop value from stack to ZP address
 SWAP     | 1100 1111 | ISR  | Swaps accumulator and ZP address value
 
 ### Misc

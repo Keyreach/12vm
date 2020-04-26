@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <signal.h>
+// POSIX stuff
+#include <unistd.h>
+#include <sys/termios.h>
 /*
 * opcode mapping
 * 
@@ -9,7 +13,7 @@
 * INT -   -   -    +0
 * LD  ST  LDI STI  +4
 * JZR JNG JMP JI   +8
-* ALU SET -   -    +C
+* ALU SET -   CSR  +C
 */
 enum {
     OP_INT,
@@ -22,7 +26,8 @@ enum {
     OP_JMP,
     OP_JI,
     OP_ALU,
-    OP_SET
+    OP_SET,
+    OP_CSR = 0xF
 };
 /*
 * alu subcode mapping
@@ -54,7 +59,7 @@ enum {
 // i/o
 enum {
     MMIO_DIGIT_OUT = 0xE0,
-    MMIO_CHAR_OUT = 0xE1,
+    MMIO_CHAR_IO = 0xE1,
     MMIO_RND_IN = 0xE2
 };
 
@@ -70,9 +75,40 @@ static short vmem[0x100] = {
     0x000, 0x000, 0x0DF, 0x000
 };
 
+short vm_io_check_key() {
+    fd_set readfds;
+    struct timeval timeout;
+    FD_ZERO(&readfds);
+    FD_SET(STDIN_FILENO, &readfds);
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+    return select(1, &readfds, NULL, NULL, &timeout) != 0;
+}
+
+struct termios initial_termio;
+
+void vm_io_setup_input() {
+    tcgetattr(STDIN_FILENO, &initial_termio);
+    struct termios tio = initial_termio;
+    tio.c_lflag &= ~ICANON & ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &tio);
+}
+
+void vm_io_restore_input() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &initial_termio);
+}
+
+void vm_handle_signal(int signal) {
+    vm_io_restore_input();
+    exit(-2);
+}
+
+
 short vm_mem_read(unsigned short addr) {
     if(addr == MMIO_RND_IN) {
         return rand() & 0xFFFF;
+    } else if(addr == MMIO_CHAR_IO) {
+        return getchar();
     }
     return vmem[addr];
 }
@@ -80,7 +116,7 @@ short vm_mem_read(unsigned short addr) {
 void vm_mem_write(unsigned short addr, short value) {
     if(addr == MMIO_DIGIT_OUT) {
         printf("%hd\n", value);
-    } else if(addr == MMIO_CHAR_OUT) {
+    } else if(addr == MMIO_CHAR_IO) {
         putchar((unsigned char)(value & 0xFF));
     } else {
         vmem[addr] = value;
@@ -136,6 +172,18 @@ void runvm() {
             break;
         case OP_SET:
             acc = LOW_BYTE(op);
+            break;
+        case OP_CSR:
+            if(op && 0xF0) {
+                vm_mem_write(vmem[REG_SP], ip);
+                vmem[REG_SP]--;
+                ip = (LOW_BYTE(op));
+            } else {
+                // there is no way to store subroutine
+                // in zeropage so treat calls as ret
+                vmem[REG_SP]++;
+                ip = vm_mem_read(vmem[REG_SP]);
+            }
             break;
         case OP_ALU:
             switch((op >> 4) & 0xF) {
@@ -212,6 +260,9 @@ int main(int argc, char **argv) {
     if(fs > 245 * 2) return 1;
     memcpy((char *)(&vmem[RESERVED_OFFSET]), buf, fs);
     
+    signal(SIGINT, vm_handle_signal);
+    vm_io_setup_input();
     runvm();
+    vm_io_restore_input();
     return 0;
 }
