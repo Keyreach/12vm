@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <string.h>
 /*
 * opcode mapping
@@ -26,7 +27,7 @@ enum {
 /*
 * alu subcode mapping
 * 
-* ..0 ..1 ..2 ..3
+* .C0 .C1 .C2 .C3
 * ADD SUB AND OR   +0
 * INC DEC INV XOR  +4
 * -   -   -   -    +8
@@ -53,7 +54,8 @@ enum {
 // i/o
 enum {
     MMIO_DIGIT_OUT = 0xE0,
-    MMIO_CHAR_OUT = 0xE1
+    MMIO_CHAR_OUT = 0xE1,
+    MMIO_RND_IN = 0xE2
 };
 
 #define RESERVED_OFFSET 0x10
@@ -69,6 +71,9 @@ static short vmem[0x100] = {
 };
 
 short vm_mem_read(unsigned short addr) {
+    if(addr == MMIO_RND_IN) {
+        return rand() & 0xFFFF;
+    }
     return vmem[addr];
 }
 
@@ -87,6 +92,9 @@ void runvm() {
     unsigned short ip = RESERVED_OFFSET, op, addr, tmp;
     signed short acc = 0;
     char prefix;
+    
+    srand(time(NULL));
+    
     while(ip < 0x100) {
         counter++;
         op = vmem[ip];
@@ -176,7 +184,7 @@ void runvm() {
             break;
         }
     }
-    printf("\nCycles: %ld\n", counter);
+    printf("\nOperations: %ld\n", counter);
 }
 
 int main(int argc, char **argv) {
